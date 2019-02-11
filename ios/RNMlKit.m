@@ -5,6 +5,7 @@
 
 #import <FirebaseCore/FirebaseCore.h>
 #import <FirebaseMLVision/FirebaseMLVision.h>
+#import <React/RCTImageLoader.h>
 
 @implementation RNMlKit
 
@@ -25,9 +26,12 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
     dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
         FIRVision *vision = [FIRVision vision];
         FIRVisionTextRecognizer *textRecognizer = [vision onDeviceTextRecognizer];
-        NSDictionary *d = [[NSDictionary alloc] init];
-        NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imagePath]];
-        UIImage *image = [UIImage imageWithData:imageData];
+        
+        //NSDictionary *d = [[NSDictionary alloc] init];
+        
+        UIImage *image = [[UIImage alloc] initWithContentsOfFile:imagePath];
+        //NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imagePath]];
+        //UIImage *image = [UIImage imageWithData:imageData];
         
         if (!image) {
             dispatch_async(dispatch_get_main_queue(), ^{
@@ -51,33 +55,115 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                 return;
             }
 
-            CGRect boundingBox;
-            CGSize size;
-            CGPoint origin;
+          //  CGRect boundingBox;
+          //  CGSize size;
+            //CGPoint origin;
             NSMutableArray *output = [NSMutableArray array];
 
             for (FIRVisionTextBlock *block in result.blocks) {
-                NSMutableDictionary *blocks = [NSMutableDictionary dictionary];
+                NSMutableDictionary *blockDict = [NSMutableDictionary dictionary];
                 NSMutableDictionary *bounding = [NSMutableDictionary dictionary];
-                NSString *blockText = block.text;
+                
+                NSMutableDictionary *origin = [NSMutableDictionary dictionary];
+                NSMutableDictionary *size = [NSMutableDictionary dictionary];
+                blockDict[@"blockText"] = block.text;
+                
+                NSMutableArray *langsArray = [NSMutableArray array];
+                for (FIRVisionTextRecognizedLanguage *lang in block.recognizedLanguages) {
+                    if(lang.languageCode)
+                        [langsArray addObject:lang.languageCode];
+                }
+                blockDict[@"recognized_lang"] = langsArray;
+                
 
-                blocks[@"resultText"] = result.text;
-                blocks[@"blockText"] = block.text;
-                blocks[@"bounding"] = bounding;
-                [output addObject:blocks];
-
+                
+               // NSArray<NSValue *> *blockCornerPoints = block.cornerPoints;
+                CGRect blockFrame = block.frame;
+                origin[@"x"] = @(blockFrame.origin.x);
+                origin[@"y"] = @(blockFrame.origin.y);
+                size[@"width"]= @(blockFrame.size.width);
+                size[@"height"]= @(blockFrame.size.height);
+                
+                
+                bounding[@"origin"] = origin;
+                bounding[@"size"] = size;
+                
+                //NSMutableDictionary *blockDict2 = block.;
+                
+                blockDict[@"bounding"] = bounding;
+                //[output addObject:blocks];
+                NSMutableArray *linesArray = [NSMutableArray array];
                 for (FIRVisionTextLine *line in block.lines) {
-                    NSMutableDictionary *lines = [NSMutableDictionary dictionary];
-                    lines[@"lineText"] = line.text;
-                    [output addObject:lines];
-
+                    NSMutableDictionary *lineDict = [NSMutableDictionary dictionary];
+                    
+                    NSMutableDictionary *bounding = [NSMutableDictionary dictionary];
+                    NSMutableDictionary *origin = [NSMutableDictionary dictionary];
+                    NSMutableDictionary *size = [NSMutableDictionary dictionary];
+                    
+                    lineDict[@"lineText"] = line.text;
+                    
+                    NSMutableArray *langsArray = [NSMutableArray array];
+                    for (FIRVisionTextRecognizedLanguage *lang in line.recognizedLanguages) {
+                        if(lang.languageCode)
+                            [langsArray addObject:lang.languageCode];
+                    }
+                    lineDict[@"recognized_lang"] = langsArray;
+                    
+                    CGRect lineFrame = line.frame;
+                    origin[@"x"] = @(lineFrame.origin.x);
+                    origin[@"y"] = @(lineFrame.origin.y);
+                    size[@"width"]= @(lineFrame.size.width);
+                    size[@"height"]= @(lineFrame.size.height);
+                    
+                    
+                    bounding[@"origin"] = origin;
+                    bounding[@"size"] = size;
+                    
+                    //NSMutableDictionary *blockDict2 = block.;
+                    
+                    lineDict[@"bounding"] = bounding;
+                    
+                    ///[output addObject:lines];
+                    NSMutableArray *elementsArray = [NSMutableArray array];
                     for (FIRVisionTextElement *element in line.elements) {
-                        NSMutableDictionary *elements = [NSMutableDictionary dictionary];
-                        elements[@"elementText"] = element.text;
-                        [output addObject:elements];
+                        NSMutableDictionary *elementDict = [NSMutableDictionary dictionary];
+                        
+                        NSMutableDictionary *bounding = [NSMutableDictionary dictionary];
+                        NSMutableDictionary *origin = [NSMutableDictionary dictionary];
+                        NSMutableDictionary *size = [NSMutableDictionary dictionary];
+                        
+                    
+                        elementDict[@"elementText"] = element.text;
+                        
+                        NSMutableArray *langsArray = [NSMutableArray array];
+                            for (FIRVisionTextRecognizedLanguage *lang in element.recognizedLanguages) {
+                                if(lang.languageCode)
+                                    [langsArray addObject:lang.languageCode];
+                            }
+                        elementDict[@"recognized_lang"] = langsArray;
+                        
+                        CGRect elementFrame = element.frame;
+                        origin[@"x"] = @(elementFrame.origin.x);
+                        origin[@"y"] = @(elementFrame.origin.y);
+                        size[@"width"]= @(elementFrame.size.width);
+                        size[@"height"]= @(elementFrame.size.height);
+                        
+                        
+                        bounding[@"origin"] = origin;
+                        bounding[@"size"] = size;
+                        
+                        //NSMutableDictionary *blockDict2 = block.;
+                        
+                        elementDict[@"bounding"] = bounding;
+                        
+                        [elementsArray addObject:elementDict];
 
                     }
+                    lineDict[@"elements"] = elementsArray;
+                    [linesArray addObject:lineDict];
                 }
+                blockDict[@"lines"] = linesArray;
+                [output addObject:blockDict];
             }
 
             dispatch_async(dispatch_get_main_queue(), ^{
