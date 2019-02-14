@@ -1,4 +1,3 @@
-
 #import "RNMlKit.h"
 
 #import <React/RCTBridge.h>
@@ -17,6 +16,12 @@ RCT_EXPORT_MODULE()
 
 static NSString *const detectionNoResultsMessage = @"Something went wrong";
 
+
+- (UIImage *)decodeBase64ToImage:(NSString *)strEncodeData {
+    NSData *data = [[NSData alloc]initWithBase64EncodedString:strEncodeData options:NSDataBase64DecodingIgnoreUnknownCharacters];
+    return [UIImage imageWithData:data];
+}
+
 RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imagePath resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject) {
     if (!imagePath) {
         resolve(@NO);
@@ -28,8 +33,8 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
         FIRVisionTextRecognizer *textRecognizer = [vision onDeviceTextRecognizer];
         
         //NSDictionary *d = [[NSDictionary alloc] init];
-        
-        UIImage *image = [[UIImage alloc] initWithContentsOfFile:imagePath];
+        UIImage *image = [self decodeBase64ToImage:imagePath];
+        //UIImage *image = [[UIImage alloc] initWithContentsOfFile:imagePath];
         //NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imagePath]];
         //UIImage *image = [UIImage imageWithData:imageData];
         
@@ -41,7 +46,7 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
         }
         
         FIRVisionImage *handler = [[FIRVisionImage alloc] initWithImage:image];
-
+        
         [textRecognizer processImage:handler completion:^(FIRVisionText *_Nullable result, NSError *_Nullable error) {
             if (error != nil || result == nil) {
                 NSString *errorString = error ? error.localizedDescription : detectionNoResultsMessage;
@@ -54,17 +59,20 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                 });
                 return;
             }
-
-          //  CGRect boundingBox;
-          //  CGSize size;
+            
+            //  CGRect boundingBox;
+            //  CGSize size;
             //CGPoint origin;
             NSMutableArray *output = [NSMutableArray array];
-
+            
             for (FIRVisionTextBlock *block in result.blocks) {
                 NSMutableDictionary *blockDict = [NSMutableDictionary dictionary];
                 NSMutableDictionary *bounding = [NSMutableDictionary dictionary];
                 
                 NSMutableDictionary *origin = [NSMutableDictionary dictionary];
+                NSMutableDictionary *originRight = [NSMutableDictionary dictionary];
+                NSMutableDictionary *center = [NSMutableDictionary dictionary];
+                
                 NSMutableDictionary *size = [NSMutableDictionary dictionary];
                 blockDict[@"blockText"] = block.text;
                 
@@ -75,17 +83,24 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                 }
                 blockDict[@"recognized_lang"] = langsArray;
                 
-
                 
-               // NSArray<NSValue *> *blockCornerPoints = block.cornerPoints;
+                
+                // NSArray<NSValue *> *blockCornerPoints = block.cornerPoints;
                 CGRect blockFrame = block.frame;
                 origin[@"x"] = @(blockFrame.origin.x);
                 origin[@"y"] = @(blockFrame.origin.y);
+                
+                originRight[@"x"] = @(blockFrame.origin.x+blockFrame.size.width);
+                originRight[@"y"] = @(blockFrame.origin.y);
+                center[@"x"] = @(blockFrame.origin.x +(blockFrame.size.width/2));
+                center[@"y"] = @(blockFrame.origin.y+ (blockFrame.size.height/2));
                 size[@"width"]= @(blockFrame.size.width);
                 size[@"height"]= @(blockFrame.size.height);
                 
                 
                 bounding[@"origin"] = origin;
+                bounding[@"origin_right"] = originRight;
+                bounding[@"center"] = center;
                 bounding[@"size"] = size;
                 
                 //NSMutableDictionary *blockDict2 = block.;
@@ -98,6 +113,9 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                     
                     NSMutableDictionary *bounding = [NSMutableDictionary dictionary];
                     NSMutableDictionary *origin = [NSMutableDictionary dictionary];
+                    NSMutableDictionary *originRight = [NSMutableDictionary dictionary];
+                    NSMutableDictionary *center = [NSMutableDictionary dictionary];
+                    
                     NSMutableDictionary *size = [NSMutableDictionary dictionary];
                     
                     lineDict[@"lineText"] = line.text;
@@ -112,11 +130,17 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                     CGRect lineFrame = line.frame;
                     origin[@"x"] = @(lineFrame.origin.x);
                     origin[@"y"] = @(lineFrame.origin.y);
+                    originRight[@"x"] = @(blockFrame.origin.x+blockFrame.size.width);
+                    originRight[@"y"] = @(blockFrame.origin.y);
+                    center[@"x"] = @(blockFrame.origin.x +(blockFrame.size.width/2));
+                    center[@"y"] = @(blockFrame.origin.y+ (blockFrame.size.height/2));
                     size[@"width"]= @(lineFrame.size.width);
                     size[@"height"]= @(lineFrame.size.height);
                     
                     
                     bounding[@"origin"] = origin;
+                    bounding[@"origin_right"] = originRight;
+                    bounding[@"center"] = center;
                     bounding[@"size"] = size;
                     
                     //NSMutableDictionary *blockDict2 = block.;
@@ -130,26 +154,34 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                         
                         NSMutableDictionary *bounding = [NSMutableDictionary dictionary];
                         NSMutableDictionary *origin = [NSMutableDictionary dictionary];
+                        NSMutableDictionary *originRight = [NSMutableDictionary dictionary];
+                        NSMutableDictionary *center = [NSMutableDictionary dictionary];
                         NSMutableDictionary *size = [NSMutableDictionary dictionary];
                         
-                    
+                        
                         elementDict[@"elementText"] = element.text;
                         
                         NSMutableArray *langsArray = [NSMutableArray array];
-                            for (FIRVisionTextRecognizedLanguage *lang in element.recognizedLanguages) {
-                                if(lang.languageCode)
-                                    [langsArray addObject:lang.languageCode];
-                            }
+                        for (FIRVisionTextRecognizedLanguage *lang in element.recognizedLanguages) {
+                            if(lang.languageCode)
+                                [langsArray addObject:lang.languageCode];
+                        }
                         elementDict[@"recognized_lang"] = langsArray;
                         
                         CGRect elementFrame = element.frame;
                         origin[@"x"] = @(elementFrame.origin.x);
                         origin[@"y"] = @(elementFrame.origin.y);
+                        originRight[@"x"] = @(blockFrame.origin.x+blockFrame.size.width);
+                        originRight[@"y"] = @(blockFrame.origin.y);
+                        center[@"x"] = @(blockFrame.origin.x +(blockFrame.size.width/2));
+                        center[@"y"] = @(blockFrame.origin.y+ (blockFrame.size.height/2));
                         size[@"width"]= @(elementFrame.size.width);
                         size[@"height"]= @(elementFrame.size.height);
                         
                         
                         bounding[@"origin"] = origin;
+                        bounding[@"origin_right"] = originRight;
+                        bounding[@"center"] = center;
                         bounding[@"size"] = size;
                         
                         //NSMutableDictionary *blockDict2 = block.;
@@ -157,7 +189,7 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                         elementDict[@"bounding"] = bounding;
                         
                         [elementsArray addObject:elementDict];
-
+                        
                     }
                     lineDict[@"elements"] = elementsArray;
                     [linesArray addObject:lineDict];
@@ -165,13 +197,12 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                 blockDict[@"lines"] = linesArray;
                 [output addObject:blockDict];
             }
-
+            
             dispatch_async(dispatch_get_main_queue(), ^{
                 resolve(output);
             });
         }];
     });
-    
 }
-
 @end
+
