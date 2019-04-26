@@ -33,7 +33,12 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
         FIRVisionTextRecognizer *textRecognizer = [vision onDeviceTextRecognizer];
         
         //NSDictionary *d = [[NSDictionary alloc] init];
+        //if Base64
         UIImage *image = [self decodeBase64ToImage:imagePath];
+        if (!image) {
+            //If URI
+            image = [[UIImage alloc] initWithContentsOfFile:imagePath];
+        }
         //UIImage *image = [[UIImage alloc] initWithContentsOfFile:imagePath];
         //NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imagePath]];
         //UIImage *image = [UIImage imageWithData:imageData];
