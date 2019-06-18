@@ -197,10 +197,10 @@ RCT_REMAP_METHOD(deviceTextRecognition, deviceTextRecognition:(NSString *)imageP
                         
                     }
                     lineDict[@"elements"] = elementsArray;
-                    [linesArray addObject:lineDict];
+                    [output addObject:lineDict];
                 }
-                blockDict[@"lines"] = linesArray;
-                [output addObject:blockDict];
+               // blockDict[@"lines"] = linesArray;
+               // [output addObject:blockDict];
             }
             
             dispatch_async(dispatch_get_main_queue(), ^{
