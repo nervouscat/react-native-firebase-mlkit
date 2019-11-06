@@ -16,4 +16,7 @@ Pod::Spec.new do |s|
   s.static_framework = true
   s.dependency     "React"
   s.dependency     "Firebase"
+  s.dependency     "Firebase/Core"
+  s.dependency     "Firebase/MLVision"
+  s.dependency     "Firebase/MLVisionTextModel"
 end
